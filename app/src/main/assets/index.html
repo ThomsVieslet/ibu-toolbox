@@ -80,6 +80,7 @@
         box-shadow: 0 -3px 12px rgba(0,0,0,.18);
       }
       #resultBar .lab { font-size:.75rem; opacity:.85; }
+      #resultBar #matchBar { color:#ccfbf1; font-size:.6rem; line-height:1.25; max-width:240px; max-height:3.8em; overflow:hidden; margin-top:2px; }
       #resultBar .val { font-size: 2rem; font-weight: 800; line-height:1; }
       #resultBar .val small { font-size:.85rem; font-weight:400; }
     </style>
@@ -115,8 +116,10 @@
 
       <div class="card gaugecard">
         <h2><span class="badge">3</span> Échelle des styles</h2>
-        <label for="styleSel">Comparer à un style (optionnel)</label>
-        <select id="styleSel"><option value="">— Aucun —</option></select>
+        <label for="styleSearch">Comparer à un style (tapez pour chercher)</label>
+        <input id="styleSearch" list="styleDatalist" placeholder="Ex. : Saison" />
+        <datalist id="styleDatalist"></datalist>
+        <div class="hint">Le champ se vide = aucun style sélectionné</div>
         <div id="gaugeWrap">
           <div class="gauge-flex">
             <div id="laneLabels"></div>
@@ -130,7 +133,11 @@
     </div>
 
     <div id="resultBar">
-      <div><div class="lab">IBU total</div><div class="hint" style="color:#ccfbf1" id="posInfo"></div></div>
+      <div>
+        <div class="lab">IBU total</div>
+        <div class="hint" style="color:#ccfbf1" id="posInfo"></div>
+        <div class="hint" id="matchBar"></div>
+      </div>
       <div class="val" id="ibuVal">0 <small>IBU</small></div>
     </div>
 
@@ -197,8 +204,8 @@
       // ↺ : remet l'alpha du stock pour le houblon sélectionné de cette ligne
       function resetAlpha(btn) {
         const hopEl = btn.closest(".hop");
-        const sel = hopEl.querySelector("select");
-        const h = HOPS.find(x => x.name === sel.value);
+        const nameInp = hopEl.querySelector("input[list=hopDatalist]");
+        const h = HOPS.find(x => x.name.toLowerCase() === nameInp.value.trim().toLowerCase());
         const inp = hopEl.querySelector("input[id^=alpha]");
         if (h) inp.value = fr(h.alpha);
         recalc();
@@ -220,8 +227,8 @@
         div.innerHTML = `
           <div class="hop-head"><span id="hopName${hopCount}">Houblon ${hopCount}</span>
             <button class="del" onclick="this.closest('.hop').remove();recalc()">✕</button></div>
-          <label>Houblon</label>
-          <select onchange="onHopSelect(this)">${HOPS.map(h=>`<option>${h.name}</option>`).join("")}</select>
+          <label>Houblon (tapez pour chercher)</label>
+          <input list="hopDatalist" value="${HOPS[0].name}" onchange="onHopInput(this)" oninput="onHopLive(this)">
           <div class="row2">
             <div><label>Acide alpha (%) <button class="rst" title="Valeur du stock" onclick="resetAlpha(this)">↺</button></label>
               <input id="alpha${hopCount}" inputmode="decimal" value="${fr(HOPS[0].alpha)}" oninput="recalc()"></div>
@@ -242,11 +249,21 @@
         document.getElementById("hops").appendChild(div);
         recalc();
       }
-      function onHopSelect(sel) {
-        const h = HOPS.find(x => x.name === sel.value);
-        const id = sel.parentElement.querySelector("input[id^=alpha]").id;
-        document.getElementById(id).value = h ? fr(h.alpha) : "";
+      function onHopInput(inp) {
+        const h = HOPS.find(x => x.name.toLowerCase() === inp.value.trim().toLowerCase());
+        const hopEl = inp.closest(".hop");
+        const alphaInp = hopEl.querySelector("input[id^=alpha]");
+        if (h) alphaInp.value = fr(h.alpha);
         recalc();
+      }
+      // suggestion en direct pendant la frappe : si le texte correspond exactement à un houblon, met à jour l'alpha
+      function onHopLive(inp) {
+        const h = HOPS.find(x => x.name.toLowerCase() === inp.value.trim().toLowerCase());
+        if (h) {
+          const hopEl = inp.closest(".hop");
+          hopEl.querySelector("input[id^=alpha]").value = fr(h.alpha);
+          recalc();
+        }
       }
 
       // ---- Calcul Tinseth ----
@@ -298,9 +315,8 @@
         ctx.clearRect(0, 0, w, h);
         const x0 = 8, x1 = w - 8, maxIbu = 120;
         const X = v => x0 + (Math.min(Math.max(v, 0), maxIbu) / maxIbu) * (x1 - x0);
-        // lanes familles
-        const selIdx = document.getElementById("styleSel").value;
-        const selStyle = selIdx !== "" ? STYLES[selIdx] : null;
+        // style précis sélectionné → surlignage teal foncé
+        const selStyle = selectedStyleIdx >= 0 ? STYLES[selectedStyleIdx] : null;
         FAMS.forEach((f, i) => {
           const y = padTop + i * laneH;
           const inRange = ibu >= f.min && ibu <= f.max;
@@ -333,12 +349,11 @@
         ctx.fillText(fr(ibu.toFixed(1)), lx - 10, 12);
       }
 
+      let selectedStyleIdx = -1; // style choisi pour comparaison précise
       function updateMatch(ibu) {
-        const sel = document.getElementById("styleSel");
-        const selIdx = sel.value;
         const info = document.getElementById("posInfo");
-        if (selIdx !== "") {
-          const st = STYLES[selIdx];
+        if (selectedStyleIdx >= 0) {
+          const st = STYLES[selectedStyleIdx];
           const inRange = ibu >= st[3] && ibu <= st[4];
           info.textContent = inRange
             ? `✓ Dans le style ${st[2]}`
@@ -347,11 +362,16 @@
           info.textContent = "";
         }
         // styles compatibles
-        const matches = STYLES.map((s, i) => [i, s]).filter(([, s]) => ibu >= s[3] && ibu <= s[4]);
+        const matches = STYLES.filter(s => ibu >= s[3] && ibu <= s[4]);
+        // bandeau bas : styles qui matchent l'IBU total
+        const bar = document.getElementById("matchBar");
+        bar.textContent = matches.length
+          ? "Styles : " + matches.map(s => s[2]).join(" · ")
+          : "Aucun style dans cette gamme";
         let html = `<div class="hint">Styles dont la gamme contient ${fr(ibu.toFixed(1))} IBU :</div>`;
         if (!matches.length) html += `<div class="hint">Aucun style dans cette gamme (peu amer ou très extrême).</div>`;
         let fam = "";
-        matches.forEach(([, s]) => {
+        matches.forEach(s => {
           if (s[0] !== fam) { fam = s[0]; html += `<div class="fam">${fam}</div>`; }
           html += `<span class="st">${s[2]}</span> · `;
         });
@@ -360,21 +380,32 @@
 
       // ---- Init ----
       (function init() {
-        const sel = document.getElementById("styleSel");
-        let fam = "";
-        STYLES.forEach((s, i) => {
-          if (s[0] !== fam) {
-            fam = s[0];
-            const og = document.createElement("optgroup");
-            og.label = fam; og.id = "og_" + i;
-            sel.appendChild(og);
-          }
-          const opt = document.createElement("option");
-          opt.value = i;
-          opt.textContent = `${s[2]} (${s[3]}–${s[4]})`;
-          document.getElementById("og_" + (STYLES.findIndex(x => x[0] === fam))).appendChild(opt);
+        // datalist houblons, triée alphabétiquement
+        const hopDl = document.createElement("datalist");
+        hopDl.id = "hopDatalist";
+        HOPS.slice().sort((a, b) => a.name.localeCompare(b.name, "fr")).forEach(h => {
+          const o = document.createElement("option");
+          o.value = h.name;
+          hopDl.appendChild(o);
         });
-        sel.onchange = recalc;
+        document.body.appendChild(hopDl);
+        // datalist styles : triée par famille puis par style (ordre alphabétique)
+        const stDl = document.getElementById("styleDatalist");
+        STYLES.map((s, i) => [i, s])
+          .sort((a, b) => a[1][0].localeCompare(b[1][0], "fr") || a[1][2].localeCompare(b[1][2], "fr"))
+          .forEach(([i, s]) => {
+            const o = document.createElement("option");
+            o.value = s[2];
+            o.label = `${s[0]} (${s[3]}–${s[4]} IBU)`;
+            stDl.appendChild(o);
+          });
+        const stSearch = document.getElementById("styleSearch");
+        stSearch.addEventListener("change", () => {
+          const v = stSearch.value.trim().toLowerCase();
+          const idx = v ? STYLES.findIndex(s => s[2].toLowerCase() === v) : -1;
+          selectedStyleIdx = idx;
+          recalc();
+        });
         ["vol", "og"].forEach(id => document.getElementById(id).oninput = recalc);
         addHop(60);
         addHop(10);
