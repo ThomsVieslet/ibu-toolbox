@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IBU Toolbox</title>
+    <style>
+      :root {
+        font-family: Inter, system-ui, sans-serif;
+        color: #111827;
+        background: #f1f5f9;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 0 0 120px 0; }
+      .wrap { max-width: 560px; margin: 0 auto; padding: 12px; }
+      .cols { display: grid; grid-template-columns: 1fr 190px; gap: 10px; align-items: start; }
+      .gaugecard { position: sticky; top: 8px; }
+      @media (max-width: 430px) {
+        .cols { grid-template-columns: 1fr; }
+        .gaugecard { position: static; }
+      }
+      h1 { font-size: 1.3rem; color: #0f766e; margin: 8px 0 2px; text-align:center; }
+      .sub { text-align:center; color:#64748b; font-size:.8rem; margin-bottom:12px; }
+      .card {
+        background: #fff; border-radius: 14px; padding: 14px;
+        margin-bottom: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      }
+      .card h2 { font-size: .95rem; margin: 0 0 10px; color: #0f766e; display:flex; align-items:center; gap:8px; }
+      .badge { background:#0f766e; color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:.75rem; flex:none; }
+      .arrow { text-align:center; color:#94a3b8; font-size:1.2rem; line-height:1; margin:2px 0 8px; }
+      label { display:block; font-size:.75rem; color:#475569; margin:6px 0 3px; }
+      input, select {
+        width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #cbd5e1;
+        border-radius: 10px; background:#fff; color:#111827;
+      }
+      input:focus, select:focus { outline: 2px solid #0f766e; border-color:#0f766e; }
+      .row2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+      .hop { border:1px solid #e2e8f0; border-radius:12px; padding:10px; margin-bottom:10px; background:#f8fafc; }
+      .hop-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+      .hop-head span { font-size:.8rem; color:#64748b; }
+      .del { background:#fee2e2; color:#b91c1c; border:none; border-radius:8px; padding:6px 10px; font-size:.75rem; }
+      .subtl { font-size:.8rem; color:#0f766e; font-weight:600; margin-top:6px; }
+      .stepper { display:flex; gap:4px; align-items:stretch; }
+      .stepper button {
+        flex:none; width:38px; padding:10px 0; background:#fff; color:#0f766e;
+        border:1px solid #cbd5e1; border-radius:10px; font-size:.9rem; font-weight:700;
+      }
+      .stepper button:active { background:#0f766e; color:#fff; }
+      .stepper input { text-align:center; min-width:0; flex:1; padding:10px 2px; }
+      .addbtn {
+        width:100%; padding:12px; background:#fff; color:#0f766e; border:1.5px dashed #0f766e;
+        border-radius:10px; font-size:.9rem; font-weight:600; margin-top:4px;
+      }
+      .rst { background:#e2e8f0; color:#0f766e; border:none; border-radius:6px; padding:1px 7px; font-size:.7rem; }
+      .rstbig { margin-left:auto; background:#e2e8f0; color:#0f766e; border:none; border-radius:8px; padding:5px 10px; font-size:.72rem; font-weight:600; }
+      .formula { font-size:.72rem; color:#64748b; margin-top:8px; line-height:1.5; }
+      /* jauge */
+      #gaugeWrap { margin-top: 6px; }
+      .gauge-flex { display:flex; gap:6px; align-items:flex-start; }
+      #laneLabels { flex:none; width:118px; padding-top:14px; }
+      .gaugecard #laneLabels { width:76px; }
+      .gaugecard #laneLabels div { font-size:6.5px; }
+      #laneLabels div {
+        height:9px; font-size:7.5px; color:#64748b; overflow:hidden;
+        white-space:nowrap; text-overflow:ellipsis; line-height:9px;
+        margin-bottom:3px;
+      }
+      #gauge { flex:1; width:auto; min-width:0; display:block; }
+      .gauge-legend { display:flex; justify-content:space-between; font-size:.7rem; color:#64748b; }
+      #matchList { margin-top:10px; font-size:.78rem; }
+      #matchList .fam { color:#475569; font-weight:700; margin-top:6px; font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; }
+      #matchList .st { color:#0f766e; }
+      .hint { font-size:.72rem; color:#94a3b8; margin-top:6px; }
+      /* bandeau résultat */
+      #resultBar {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background: #0f766e; color: #fff; padding: 14px 16px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 -3px 12px rgba(0,0,0,.18);
+      }
+      #resultBar .lab { font-size:.75rem; opacity:.85; }
+      #resultBar .val { font-size: 2rem; font-weight: 800; line-height:1; }
+      #resultBar .val small { font-size:.85rem; font-weight:400; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>🍺 IBU Toolbox</h1>
+      <div class="sub">Amertume (Tinseth) — la couleur (EBC) viendra dans une carte séparée</div>
+
+      <div class="card">
+        <h2><span class="badge">1</span> Brassin</h2>
+        <div class="row2">
+          <div>
+            <label for="vol">Volume après ébullition (L)</label>
+            <input id="vol" inputmode="decimal" value="23" />
+          </div>
+          <div>
+            <label for="og">Densité initiale (OG)</label>
+            <input id="og" inputmode="decimal" value="1.050" />
+          </div>
+        </div>
+      </div>
+      <div class="arrow">↓</div>
+
+      <div class="cols">
+      <div class="card">
+        <h2><span class="badge">2</span> Houblons
+          <button class="rstbig" onclick="resetHops()">↺ Réinitialiser</button></h2>
+        <div id="hops"></div>
+        <button class="addbtn" onclick="addHop()">+ Ajouter un houblon</button>
+        <div class="formula">IBU d'un ajout = (g × %α × 10 / L) × utilisation<br>Utilisation (Tinseth) = 1,65 × 0,000125^(OG−1) × (1 − e^(−0,04 × min)) / 4,15</div>
+      </div>
+
+      <div class="card gaugecard">
+        <h2><span class="badge">3</span> Échelle des styles</h2>
+        <label for="styleSel">Comparer à un style (optionnel)</label>
+        <select id="styleSel"><option value="">— Aucun —</option></select>
+        <div id="gaugeWrap">
+          <div class="gauge-flex">
+            <div id="laneLabels"></div>
+            <canvas id="gauge" width="260" height="40"></canvas>
+          </div>
+          <div class="gauge-legend"><span>0</span><span>30</span><span>60</span><span>90</span><span>120 IBU</span></div>
+          <div id="matchList"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div id="resultBar">
+      <div><div class="lab">IBU total</div><div class="hint" style="color:#ccfbf1" id="posInfo"></div></div>
+      <div class="val" id="ibuVal">0 <small>IBU</small></div>
+    </div>
+
+    <script>
+      // ---- Données styles (extract du CSV, colonnes famille / code / bière / min / max) ----
+      const STYLES = [
+["Standard American Beer","01 A","American Light Lager",8,12],["Standard American Beer","01 B","American Lager",8,18],["Standard American Beer","01 C","Cream Ale",8,20],["Standard American Beer","01 D","American Wheat Beer",15,30],["International Lager","02 A","International Pale Lager",18,25],["International Lager","02 B","International Amber Lager",8,25],["International Lager","02 C","International Dark Lager",8,20],["Czech Lager","03 A","Czech Pale Lager",20,35],["Czech Lager","03 B","Czech Premium Pale Lager",30,45],["Czech Lager","03 C","Czech Amber Lager",20,35],["Czech Lager","03 D","Czech Dark Lager",18,34],["Pale Malty European Beer","04 A","Munich Helles",16,22],["Pale Malty European Beer","04 B","Festbier",18,25],["Pale Malty European Beer","04 C","Helles Bock",23,35],["Pale Bitter European Beer","05 A","German Leichtbier",15,28],["Pale Bitter European Beer","05 B","Kölsch",18,30],["Pale Bitter European Beer","05 C","German Helles Exportbier",20,30],["Pale Bitter European Beer","05 D","German Pils",22,40],["Amber Malty European Beer","06 A","Märzen",18,24],["Amber Malty European Beer","06 B","Rauchbier",20,30],["Amber Malty European Beer","06 C","Dunkles Bock",20,27],["Amber Bitter European Beer","07 A","Vienna Lager",18,30],["Amber Bitter European Beer","07 B","Altbier",25,50],["Amber Bitter European Beer","07 C 1","Pale Kellerbier",20,35],["Amber Bitter European Beer","07 C 2","Amber Kellerbier",25,40],["Dark European Lager","08 A","Munich Dunkel",18,28],["Dark European Lager","08 B","Schwarzbier",20,30],["Strong European Beer","09 A","Doppelbock",16,26],["Strong European Beer","09 B","Eisbock",25,35],["Strong European Beer","09 C","Baltic Porter",20,40],["German Wheat Beer","10 A","Weissbier",8,15],["German Wheat Beer","10 B","Dunkles Weissbier",10,18],["German Wheat Beer","10 C","Weizenbock",15,30],["British Bitter","11 A","Ordinary Bitter",25,35],["British Bitter","11 B","Best Bitter",25,40],["British Bitter","11 C","Strong Bitter",30,50],["Pale CommonWealth Beer","12 A","British Golden Ale",20,45],["Pale CommonWealth Beer","12 B","Australian Sparkling Ale",20,35],["Pale CommonWealth Beer","12 C","English IPA",40,60],["Brown British Beer","13 A","Dark Mild",10,25],["Brown British Beer","13 B","British Brown Ale",20,30],["Brown British Beer","13 C","English Porter",18,35],["Scottish Ale","14 A","Scottish Light",10,20],["Scottish Ale","14 B","Scottish Heavy",10,20],["Scottish Ale","14 C","Scottish Export",15,30],["Irish Beer","15 A","Irish Red Ale",18,28],["Irish Beer","15 B","Irish Stout",25,45],["Irish Beer","15 C","Irish Extra Stout",35,50],["Dark British Beer","16 A","Sweet Stout",20,40],["Dark British Beer","16 B","Oatmeal Stout",25,40],["Dark British Beer","16 C","Tropical Stout",30,50],["Dark British Beer","16 D","Foreign Extra Stout",50,70],["Strong British Ale","17 A","British Strong Ale",30,60],["Strong British Ale","17 B","Old Ale",30,60],["Strong British Ale","17 C","Wee Heavy",17,35],["Strong British Ale","17 D","English Barleywine",35,70],["Pale American Ale","18 A","Blonde Ale",15,28],["Pale American Ale","18 B","American Pale Ale",30,50],["Amber & Brown American Beer","19 A","American Amber Ale",25,40],["Amber & Brown American Beer","19 B","California Common",30,45],["Amber & Brown American Beer","19 C","American Brown Ale",20,30],["American Porter & Stout","20 A","American Porter",25,50],["American Porter & Stout","20 B","American Stout",35,75],["American Porter & Stout","20 C","Imperial Stout",50,90],["IPA","21 A","American IPA",40,70],["IPA","21 B 1","Belgian IPA",50,100],["IPA","21 B 2","Black IPA",50,90],["IPA","21 B 3","Brown IPA",40,70],["IPA","21 B 4","Red IPA",40,70],["IPA","21 B 5","Rye IPA",50,75],["IPA","21 B 6","White IPA",40,70],["Strong American Ale","22 A","Double IPA",60,120],["Strong American Ale","22 B","American Strong Ale",50,100],["Strong American Ale","22 C","American Barleywine",50,100],["Strong American Ale","22 D","Wheatwine",30,60],["European Sour Ale","23 A","Berliner Weisse",3,8],["European Sour Ale","23 B","Flanders Red Ale",10,25],["European Sour Ale","23 C","Oud Bruin",20,25],["European Sour Ale","23 D","Lambric",0,10],["European Sour Ale","23 E","Gueuze",0,10],["European Sour Ale","23 F","Fruit Lambric",0,10],["Belgian Ale","24 A","Witbier",8,20],["Belgian Ale","24 B","Belgian Pale Ale",20,30],["Belgian Ale","24 C","Bière de Garde",18,28],["Strong Belgian Ale","25 A","Belgian Blond Ale",15,30],["Strong Belgian Ale","25 B","Saison",20,35],["Strong Belgian Ale","25 C","Belgian Golden Strong Ale",22,35],["Trappist Ale","26 A","Trappist Single",25,45],["Trappist Ale","26 B","Belgian Dubbel",15,25],["Trappist Ale","26 C","Belgian Triple",20,40],["Trappist Ale","26 D","Belgian Dark Strong Ale",20,35],["Historical Beer","27 1","Gose",5,12],["Historical Beer","27 2","Kentucky Common",15,30],["Historical Beer","27 3","Lichtenhainer",5,12],["Historical Beer","27 4","London Brown Ale",15,20],["Historical Beer","27 5","Piwo Grodziskie",20,35],["Historical Beer","27 6","Pre-Prohibition Lager",25,40],["Historical Beer","27 7","Pre-Prohibition Porter",20,30],["Historical Beer","27 8","Roggenbier",10,20],["Historical Beer","27 9","Sahti",7,15]
+      ];
+
+      // ---- Liste des houblons (alpha effectif = valeur du stock si dispo, sinon milieu du range) ----
+      const HOPS = [
+        { name: "African Queen", alpha: 15.5 }, { name: "Amarillo", alpha: 9.5 },
+        { name: "Aramis", alpha: 8.1 }, { name: "Ariana", alpha: 11.5 },
+        { name: "Aurora", alpha: 9.5 }, { name: "Barbe Rouge", alpha: 4.9 },
+        { name: "Bramling Cross", alpha: 6 }, { name: "Brewers Gold", alpha: 10.6 },
+        { name: "Calista", alpha: 3.5 }, { name: "Calypso", alpha: 13 },
+        { name: "Cascade", alpha: 6.7 }, { name: "Centennial", alpha: 10.5 },
+        { name: "Challenger", alpha: 7.5 }, { name: "Chinook", alpha: 11 },
+        { name: "Citra", alpha: 12.5 }, { name: "Cluster", alpha: 7.3 },
+        { name: "Columbus", alpha: 16 }, { name: "Comet", alpha: 9.3 },
+        { name: "Crystal", alpha: 3.6 }, { name: "CTZ", alpha: 16 },
+        { name: "El Dorado", alpha: 15 }, { name: "Equanot", alpha: 14.3 },
+        { name: "Fuggles", alpha: 4.8 }, { name: "Galena", alpha: 12 },
+        { name: "Goldings", alpha: 5.5 }, { name: "Green Bullet", alpha: 13 },
+        { name: "Groene Bel", alpha: 4.5 }, { name: "Hallertau Blanc", alpha: 10.5 },
+        { name: "Hallertau Hersbrucker", alpha: 3.5 }, { name: "Hallertau Mittelfrüh", alpha: 4 },
+        { name: "Hallertau Perle", alpha: 8.5 }, { name: "Hallertau Tradition", alpha: 5.8 },
+        { name: "Herkules", alpha: 14.5 }, { name: "Huell Melon", alpha: 7.2 },
+        { name: "Iunga", alpha: 11.5 }, { name: "Lemondrop", alpha: 6 },
+        { name: "Loral", alpha: 11.8 }, { name: "Lubelski", alpha: 3.8 },
+        { name: "Magnum", alpha: 13 }, { name: "Mandarina Bavaria", alpha: 8.5 },
+        { name: "Marynka", alpha: 10.5 }, { name: "Mosaic", alpha: 12.5 },
+        { name: "Motueka", alpha: 7.5 }, { name: "Mount Hood", alpha: 6 },
+        { name: "Nothern Brewer", alpha: 9.5 }, { name: "Nugget", alpha: 11.8 },
+        { name: "Opal", alpha: 13.5 }, { name: "Pacifica", alpha: 5.5 },
+        { name: "Pekko", alpha: 14.5 }, { name: "Pilgrim", alpha: 11 },
+        { name: "Saaz", alpha: 3.8 }, { name: "Simcoe", alpha: 13 },
+        { name: "Smaragd", alpha: 5 }, { name: "Sorachi Ace", alpha: 13.8 },
+        { name: "Southern Aroma", alpha: 3.8 }, { name: "Southern Dawn", alpha: 11.9 },
+        { name: "Southern Passion", alpha: 6.5 }, { name: "Southern Star", alpha: 13.8 },
+        { name: "Spalt Select", alpha: 4.8 }, { name: "Sterling", alpha: 6.8 },
+        { name: "Strisselspalt", alpha: 2.2 }, { name: "Styrian Goldings", alpha: 4.4 },
+        { name: "Summit", alpha: 17 }, { name: "Target", alpha: 11.5 },
+        { name: "Tettnanger", alpha: 4.4 }, { name: "Tomahawk", alpha: 16 },
+        { name: "Triskel", alpha: 8.5 }, { name: "Waimea", alpha: 17.5 },
+        { name: "Whitbread Golding", alpha: 6.3 }, { name: "Willamette", alpha: 5 },
+        { name: "Zeus", alpha: 16 }
+      ];
+
+      const fr = n => String(n).replace(".", ",");
+
+      function parseNum(s) {
+        const v = parseFloat(String(s).replace(",", "."));
+        return isNaN(v) ? 0 : v;
+      }
+      function step(inp, delta) {
+        inp.value = Math.max(0, parseNum(inp.value) + delta);
+        recalc();
+      }
+      function stepById(id, delta) {
+        const inp = document.getElementById(id);
+        if (inp) step(inp, delta);
+      }
+      // ↺ : remet l'alpha du stock pour le houblon sélectionné de cette ligne
+      function resetAlpha(btn) {
+        const hopEl = btn.closest(".hop");
+        const sel = hopEl.querySelector("select");
+        const h = HOPS.find(x => x.name === sel.value);
+        const inp = hopEl.querySelector("input[id^=alpha]");
+        if (h) inp.value = fr(h.alpha);
+        recalc();
+      }
+      // Réinitialise tous les ajouts d'houblon (2 lignes par défaut : 60 min puis 10 min)
+      function resetHops() {
+        document.getElementById("hops").innerHTML = "";
+        hopCount = 0;
+        addHop(60);
+        addHop(10);
+      }
+
+      // ---- Houblons : lignes dynamiques ----
+      let hopCount = 0;
+      function addHop(defaultMin = 10) {
+        hopCount++;
+        const div = document.createElement("div");
+        div.className = "hop";
+        div.innerHTML = `
+          <div class="hop-head"><span id="hopName${hopCount}">Houblon ${hopCount}</span>
+            <button class="del" onclick="this.closest('.hop').remove();recalc()">✕</button></div>
+          <label>Houblon</label>
+          <select onchange="onHopSelect(this)">${HOPS.map(h=>`<option>${h.name}</option>`).join("")}</select>
+          <div class="row2">
+            <div><label>Acide alpha (%) <button class="rst" title="Valeur du stock" onclick="resetAlpha(this)">↺</button></label>
+              <input id="alpha${hopCount}" inputmode="decimal" value="${fr(HOPS[0].alpha)}" oninput="recalc()"></div>
+            <div><label>Grammes</label>
+              <div class="stepper">
+                <button onclick="stepById('g${hopCount}',-1)">−</button>
+                <input id="g${hopCount}" inputmode="decimal" value="20" oninput="recalc()">
+                <button onclick="stepById('g${hopCount}',1)">+</button>
+              </div></div>
+          </div>
+          <label>Minutes d'ébullition</label>
+          <div class="stepper">
+            <button onclick="stepById('min${hopCount}',-5)">−</button>
+            <input id="min${hopCount}" inputmode="decimal" value="${defaultMin}" oninput="recalc()">
+            <button onclick="stepById('min${hopCount}',5)">+</button>
+          </div>
+          <div class="subtl" id="sub${hopCount}"></div>`;
+        document.getElementById("hops").appendChild(div);
+        recalc();
+      }
+      function onHopSelect(sel) {
+        const h = HOPS.find(x => x.name === sel.value);
+        const id = sel.parentElement.querySelector("input[id^=alpha]").id;
+        document.getElementById(id).value = h ? fr(h.alpha) : "";
+        recalc();
+      }
+
+      // ---- Calcul Tinseth ----
+      function tinsethUtil(og, minutes) {
+        const bigness = 1.65 * Math.pow(0.000125, og - 1);
+        const bfactor = (1 - Math.exp(-0.04 * minutes)) / 4.15;
+        return bigness * bfactor;
+      }
+      function recalc() {
+        const vol = parseNum(document.getElementById("vol").value);
+        let og = parseNum(document.getElementById("og").value);
+        if (og > 1.5) og = og / 1000; // tolère "1050"
+        let total = 0;
+        document.querySelectorAll("#hops .hop").forEach(hopEl => {
+          const alpha = hopEl.querySelector("input[id^=alpha]").value;
+          const g = hopEl.querySelector("input[id^=g]");
+          const min = hopEl.querySelector("input[id^=min]");
+          const a = parseNum(alpha) / 100;
+          const mgL = parseNum(g.value) * a * 1000 / (vol || 1);
+          const ibu = mgL * tinsethUtil(og, parseNum(min.value));
+          hopEl.querySelector(".subtl").textContent = `→ ${fr(ibu.toFixed(1))} IBU`;
+          total += ibu;
+        });
+        document.getElementById("ibuVal").innerHTML = `${fr(total.toFixed(1))} <small>IBU</small>`;
+        drawGauge(total);
+        updateMatch(total);
+      }
+
+      // ---- Jauge ----
+      // ---- Jauge : une lane par famille de styles ----
+      const FAMS = [];
+      STYLES.forEach(s => {
+        let f = FAMS.find(x => x.name === s[0]);
+        if (!f) { f = { name: s[0], min: s[3], max: s[4], styles: [] }; FAMS.push(f); }
+        f.min = Math.min(f.min, s[3]);
+        f.max = Math.max(f.max, s[4]);
+        f.styles.push(s);
+      });
+      function drawGauge(ibu) {
+        const cv = document.getElementById("gauge");
+        cv.width = Math.max(180, cv.clientWidth || 260);
+        const labels = document.getElementById("laneLabels");
+        labels.innerHTML = FAMS.map(f =>
+          `<div style="${ibu >= f.min && ibu <= f.max ? "color:#0f766e;font-weight:700" : ""}">${f.name}</div>`
+        ).join("");
+        const laneH = 12, padTop = 14, padBottom = 16;
+        cv.height = padTop + FAMS.length * laneH + padBottom;
+        const w = cv.width, h = cv.height, ctx = cv.getContext("2d");
+        ctx.clearRect(0, 0, w, h);
+        const x0 = 8, x1 = w - 8, maxIbu = 120;
+        const X = v => x0 + (Math.min(Math.max(v, 0), maxIbu) / maxIbu) * (x1 - x0);
+        // lanes familles
+        const selIdx = document.getElementById("styleSel").value;
+        const selStyle = selIdx !== "" ? STYLES[selIdx] : null;
+        FAMS.forEach((f, i) => {
+          const y = padTop + i * laneH;
+          const inRange = ibu >= f.min && ibu <= f.max;
+          ctx.fillStyle = inRange ? "#5eead4" : "#e2e8f0";
+          ctx.fillRect(X(f.min), y, X(f.max) - X(f.min), laneH - 3);
+          if (selStyle && selStyle[0] === f.name) {
+            ctx.fillStyle = "#0f766e";
+            ctx.fillRect(X(selStyle[3]), y, X(selStyle[4]) - X(selStyle[3]), laneH - 3);
+          }
+          ctx.fillStyle = "rgba(255,255,255,.35)";
+          for (let t = 30; t < maxIbu; t += 30) ctx.fillRect(X(t), y, 1, laneH - 3);
+        });
+        // axe du bas
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillRect(x0, h - padBottom + 2, x1 - x0, 1);
+        ctx.font = "9px sans-serif";
+        for (let t = 0; t <= maxIbu; t += 30) {
+          ctx.fillRect(X(t), h - padBottom, 1, 6);
+          ctx.fillText(String(t), X(t) - 5, h - 3);
+        }
+        // marqueur IBU traversant toutes les lanes
+        const mx = X(ibu);
+        ctx.fillStyle = "#b91c1c";
+        ctx.fillRect(mx - 1, padTop - 4, 2, h - padTop - padBottom + 6);
+        ctx.beginPath();
+        ctx.moveTo(mx - 6, 2); ctx.lineTo(mx + 6, 2); ctx.lineTo(mx, 10);
+        ctx.closePath(); ctx.fill();
+        ctx.font = "bold 11px sans-serif";
+        const lx = Math.min(Math.max(mx, 22), w - 22);
+        ctx.fillText(fr(ibu.toFixed(1)), lx - 10, 12);
+      }
+
+      function updateMatch(ibu) {
+        const sel = document.getElementById("styleSel");
+        const selIdx = sel.value;
+        const info = document.getElementById("posInfo");
+        if (selIdx !== "") {
+          const st = STYLES[selIdx];
+          const inRange = ibu >= st[3] && ibu <= st[4];
+          info.textContent = inRange
+            ? `✓ Dans le style ${st[2]}`
+            : `✗ Hors style ${st[2]} (${st[3]}–${st[4]})`;
+        } else {
+          info.textContent = "";
+        }
+        // styles compatibles
+        const matches = STYLES.map((s, i) => [i, s]).filter(([, s]) => ibu >= s[3] && ibu <= s[4]);
+        let html = `<div class="hint">Styles dont la gamme contient ${fr(ibu.toFixed(1))} IBU :</div>`;
+        if (!matches.length) html += `<div class="hint">Aucun style dans cette gamme (peu amer ou très extrême).</div>`;
+        let fam = "";
+        matches.forEach(([, s]) => {
+          if (s[0] !== fam) { fam = s[0]; html += `<div class="fam">${fam}</div>`; }
+          html += `<span class="st">${s[2]}</span> · `;
+        });
+        document.getElementById("matchList").innerHTML = html.replace(/ · <div/g, "<div").replace(/ · $/, "");
+      }
+
+      // ---- Init ----
+      (function init() {
+        const sel = document.getElementById("styleSel");
+        let fam = "";
+        STYLES.forEach((s, i) => {
+          if (s[0] !== fam) {
+            fam = s[0];
+            const og = document.createElement("optgroup");
+            og.label = fam; og.id = "og_" + i;
+            sel.appendChild(og);
+          }
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = `${s[2]} (${s[3]}–${s[4]})`;
+          document.getElementById("og_" + (STYLES.findIndex(x => x[0] === fam))).appendChild(opt);
+        });
+        sel.onchange = recalc;
+        ["vol", "og"].forEach(id => document.getElementById(id).oninput = recalc);
+        addHop(60);
+        addHop(10);
+      })();
+    </script>
+  </body>
+</html>
